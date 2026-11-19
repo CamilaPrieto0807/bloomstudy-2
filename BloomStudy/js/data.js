@@ -115,8 +115,22 @@ class AppStore {
     });
     this.relaxationMethod = result.method;
   }
+  async refreshReminderStatuses() {
+    const result = await apiRequest('/tasks');
+    const statuses = new Map(result.tasks.map(task => [task.id, {
+      reminderStatus: task.reminderStatus,
+      reminderScheduledAt: task.reminderScheduledAt,
+      reminderSentAt: task.reminderSentAt,
+      reminderAttempts: task.reminderAttempts
+    }]));
+    this.tasks.forEach(task => {
+      const status = statuses.get(task.id);
+      if (status) Object.assign(task, status);
+    });
+  }
   async addTask(task) {
-    await apiRequest('/tasks', { method: 'POST', body: JSON.stringify({ task }) });
+    const result = await apiRequest('/tasks', { method: 'POST', body: JSON.stringify({ task }) });
+    Object.assign(task, result.task);
     this.tasks.push(task);
   }
   async removeTask(id) {
@@ -124,12 +138,12 @@ class AppStore {
     this.tasks = this.tasks.filter(t => t.id !== id);
   }
   async updateTask(task) {
-    await apiRequest(`/tasks/${encodeURIComponent(task.id)}`, {
+    const result = await apiRequest(`/tasks/${encodeURIComponent(task.id)}`, {
       method: 'PUT',
       body: JSON.stringify({ task })
     });
     const i = this.tasks.findIndex(t => t.id === task.id);
-    if (i >= 0) this.tasks[i] = task;
+    if (i >= 0) Object.assign(this.tasks[i], result.task);
   }
   getTask(id) { return this.tasks.find(t => t.id === id); }
   get pending()   { return this.tasks.filter(t => !t.done); }

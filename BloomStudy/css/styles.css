@@ -266,6 +266,11 @@ textarea { resize: vertical; min-height: 80px; }
 .task-body { flex: 1; }
 .task-name { font-weight: 600; font-size: .95rem; color: var(--text-dark); }
 .task-meta { font-size: .78rem; color: var(--text-light); margin-top: .2rem; }
+.reminder-status { width: fit-content; max-width: 100%; padding: .3rem .55rem; border-radius: 8px; line-height: 1.45; }
+.reminder-pending { color: #66572f; background: #f5f0e2; }
+.reminder-sending { color: #365a64; background: #e9f1f1; }
+.reminder-sent { color: #356149; background: #eaf3ed; }
+.reminder-failed, .reminder-missing { color: #8a433a; background: #f8ece9; }
 .task-badge {
   display: inline-flex; align-items: center; gap: .25rem;
   padding: .2rem .65rem; border-radius: 99px; font-size: .72rem; font-weight: 600;

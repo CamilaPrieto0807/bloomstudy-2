@@ -37,4 +37,16 @@ El servidor envía los recordatorios a la dirección verificada del token de Fir
 
 Con Gmail, usa una **contraseña de aplicación** de Google y mantén la verificación en dos pasos habilitada. Los correos se comprueban cada 30 segundos. Si SMTP no está configurado, la app informa que no se puede guardar una tarea con recordatorio.
 
+Al guardar una tarea, el mensaje confirma que el correo quedó **programado**; no significa que ya fue enviado. Se envía cuando llega la hora elegida (por ejemplo, una hora antes de la entrega). Si no indicas hora de entrega, se toma 09:00 en la zona horaria del navegador. En los registros de Render busca `SMTP listo` o `No se pudo verificar SMTP`; también aparecerán ahí los errores de envío. La interfaz muestra el estado del correo debajo de la tarea. Revisa también Spam y Promociones.
+
+El servicio debe estar activo para revisar la cola cada 30 segundos. Si el plan de Render suspende el servicio cuando está inactivo, el correo puede llegar tarde; para horarios confiables usa una instancia que permanezca activa. Para inspeccionar la cola en DB Browser for SQLite, abre la base de datos configurada en `DB_PATH` y ejecuta:
+
+```sql
+SELECT task_id, status,
+       datetime(scheduled_at / 1000, 'unixepoch', 'localtime') AS programado,
+       attempts, last_error
+FROM task_reminders
+ORDER BY scheduled_at DESC;
+```
+
 La API verifica el ID token de Firebase en cada solicitud y toma el UID del token verificado para aislar los datos. El perfil académico, tareas, historial de uso, preferencias de relajación y cola de recordatorios se guardan en SQLite; pueden usarse desde varios dispositivos si inician sesión en la misma cuenta.

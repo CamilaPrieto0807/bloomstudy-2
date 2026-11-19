@@ -126,6 +126,24 @@ function parseData(row) {
   return row ? JSON.parse(row.data) : null;
 }
 
+function taskDataForStorage(task) {
+  const { reminderStatus, reminderScheduledAt, reminderSentAt, reminderAttempts, ...storedTask } = task;
+  return storedTask;
+}
+
+function reminderStatusForTask(uid, taskId) {
+  const row = db.prepare(`
+    SELECT status, scheduled_at, sent_at, attempts
+    FROM task_reminders WHERE uid = ? AND task_id = ?
+  `).get(uid, taskId);
+  return {
+    reminderStatus: row ? row.status : null,
+    reminderScheduledAt: row ? new Date(row.scheduled_at).toISOString() : null,
+    reminderSentAt: row && row.sent_at ? new Date(row.sent_at).toISOString() : null,
+    reminderAttempts: row ? row.attempts : 0
+  };
+}
+
 function getTaskReminder(task, email, emailVerified) {
   if (task.done || !task.reminder) return { schedule: null };
   if (!allowedReminderOffsets.has(task.reminder)) {
@@ -282,8 +300,26 @@ app.put('/api/profile', requireObjectBody, (req, res) => {
 });
 
 app.get('/api/tasks', (req, res) => {
-  const rows = db.prepare('SELECT data FROM tasks WHERE uid = ? ORDER BY rowid').all(req.userId);
-  res.json({ tasks: rows.map(parseData) });
+  const rows = db.prepare(`
+    SELECT t.id, t.data, r.status AS reminder_status, r.attempts AS reminder_attempts,
+      r.scheduled_at AS reminder_scheduled_at, r.sent_at AS reminder_sent_at
+    FROM tasks t
+    LEFT JOIN task_reminders r ON r.uid = t.uid AND r.task_id = t.id
+    WHERE t.uid = ?
+    ORDER BY t.rowid
+  `).all(req.userId);
+  const tasks = rows.map(row => ({
+    ...parseData(row),
+    reminderStatus: row.reminder_status || null,
+    reminderScheduledAt: row.reminder_scheduled_at
+      ? new Date(row.reminder_scheduled_at).toISOString()
+      : null,
+    reminderSentAt: row.reminder_sent_at
+      ? new Date(row.reminder_sent_at).toISOString()
+      : null,
+    reminderAttempts: row.reminder_attempts || 0
+  }));
+  res.json({ tasks });
 });
 
 app.post('/api/tasks', requireObjectBody, (req, res) => {
@@ -291,14 +327,17 @@ app.post('/api/tasks', requireObjectBody, (req, res) => {
   if (!task || typeof task !== 'object' || Array.isArray(task) || typeof task.id !== 'string' || !task.id) {
     return res.status(400).json({ error: 'La tarea debe incluir un identificador válido.' });
   }
-  const reminder = getTaskReminder(task, req.userEmail, req.userEmailVerified);
+  const storedTask = taskDataForStorage(task);
+  const reminder = getTaskReminder(storedTask, req.userEmail, req.userEmailVerified);
   if (reminder.error) return res.status(reminder.status).json({ error: reminder.error });
   db.transaction(() => {
     db.prepare('INSERT INTO tasks (uid, id, data) VALUES (?, ?, ?)')
-      .run(req.userId, task.id, JSON.stringify(task));
+      .run(req.userId, storedTask.id, JSON.stringify(storedTask));
     saveTaskReminder(req.userId, task.id, reminder.schedule);
   })();
-  res.status(201).json({ task });
+  res.status(201).json({
+    task: { ...storedTask, ...reminderStatusForTask(req.userId, task.id) }
+  });
 });
 
 app.put('/api/tasks/:id', requireObjectBody, (req, res) => {
@@ -308,16 +347,19 @@ app.put('/api/tasks/:id', requireObjectBody, (req, res) => {
   }
   const existing = db.prepare('SELECT id FROM tasks WHERE uid = ? AND id = ?').get(req.userId, req.params.id);
   if (!existing) return res.status(404).json({ error: 'No se encontró la tarea.' });
-  const reminder = getTaskReminder(task, req.userEmail, req.userEmailVerified);
+  const storedTask = taskDataForStorage(task);
+  const reminder = getTaskReminder(storedTask, req.userEmail, req.userEmailVerified);
   if (reminder.error) return res.status(reminder.status).json({ error: reminder.error });
   const result = db.transaction(() => {
     const updated = db.prepare('UPDATE tasks SET data = ? WHERE uid = ? AND id = ?')
-      .run(JSON.stringify(task), req.userId, req.params.id);
+      .run(JSON.stringify(storedTask), req.userId, req.params.id);
     if (updated.changes) saveTaskReminder(req.userId, req.params.id, reminder.schedule);
     return updated;
   })();
   if (!result.changes) return res.status(404).json({ error: 'No se encontró la tarea.' });
-  res.json({ task });
+  res.json({
+    task: { ...storedTask, ...reminderStatusForTask(req.userId, req.params.id) }
+  });
 });
 
 app.delete('/api/tasks/:id', (req, res) => {
@@ -385,9 +427,16 @@ app.listen(port, () => {
 });
 
 if (mailTransport) {
+  mailTransport.verify()
+    .then(() => console.log(`SMTP listo en ${smtpValues.host}:${smtpValues.port}.`))
+    .catch(error => console.error(
+      `No se pudo verificar SMTP (${error.code || 'error'}): ${error.message}`
+    ));
   sendDueReminders().catch(error => console.error('Falló la revisión inicial de recordatorios:', error));
   const reminderInterval = setInterval(() => {
     sendDueReminders().catch(error => console.error('Falló la revisión de recordatorios:', error));
   }, 30000);
   reminderInterval.unref();
+} else {
+  console.warn('Recordatorios por correo desactivados: configura las variables SMTP.');
 }

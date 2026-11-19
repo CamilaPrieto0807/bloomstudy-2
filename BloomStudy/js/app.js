@@ -32,7 +32,14 @@ function showScreen(name) {
   if (navMap[name]) document.getElementById(navMap[name])?.classList.add('active');
 
   if (name === 'home')     renderHome();
-  if (name === 'tasks')    renderTasks();
+  if (name === 'tasks') {
+    renderTasks();
+    store.refreshReminderStatuses().then(() => {
+      if (document.getElementById('screen-tasks').classList.contains('active')) renderTasks();
+    }).catch(error => {
+      showAuthError(`No se pudo actualizar el estado de los recordatorios: ${error.message}`);
+    });
+  }
   if (name === 'calendar') renderCalendar();
   if (name === 'notes')    renderNotes();
   if (name === 'profile')  renderProfile();
@@ -336,6 +343,7 @@ function taskHTML(task) {
       ${task.desc ? `<div class="task-meta" style="margin-top:.3rem;font-style:italic;">
         ${task.desc.slice(0, 80)}${task.desc.length > 80 ? '…' : ''}
       </div>` : ''}
+      ${reminderStatusHTML(task)}
       <div style="margin-top:.4rem;">${badge}</div>
     </div>
     <div class="task-actions">
@@ -343,6 +351,40 @@ function taskHTML(task) {
       <button class="btn btn-danger btn-sm" onclick="deleteTask('${task.id}')" title="Eliminar">🗑️</button>
     </div>
   </div>`;
+}
+
+function reminderStatusHTML(task) {
+  if (!task.reminder) return '';
+
+  const scheduledAt = task.reminderScheduledAt
+    ? new Date(task.reminderScheduledAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+    : '';
+  const sentAt = task.reminderSentAt
+    ? new Date(task.reminderSentAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })
+    : '';
+  const retryMessage = task.reminderAttempts
+    ? `El servidor está reintentando el envío (intento ${task.reminderAttempts} de 5). Revisa los registros de Render.`
+    : '';
+  const statuses = {
+    pending: {
+      className: 'reminder-pending',
+      text: retryMessage || `Correo programado para ${scheduledAt || 'la hora elegida'}. No se envía al guardar.`
+    },
+    sending: { className: 'reminder-sending', text: 'El servidor está enviando el correo.' },
+    sent: {
+      className: 'reminder-sent',
+      text: `Correo enviado por el servidor${sentAt ? ` el ${sentAt}` : ''}. Si no aparece, revisa Spam.`
+    },
+    failed: {
+      className: 'reminder-failed',
+      text: 'No se pudo enviar. Revisa SMTP y los registros de Render.'
+    }
+  };
+  const status = statuses[task.reminderStatus] || {
+    className: 'reminder-missing',
+    text: 'No hay correo programado. Edita y vuelve a guardar esta tarea.'
+  };
+  return `<div class="task-meta reminder-status ${status.className}">🔔 ${status.text}</div>`;
 }
 
 /* ===================== MODAL — AGREGAR / EDITAR TAREA ===================== */
@@ -391,6 +433,7 @@ async function saveTask() {
   const desc     = document.getElementById('task-desc').value.trim();
   const reminder = document.getElementById('task-reminder').value;
   const editId   = document.getElementById('edit-task-id').value;
+  let reminderAt = null;
 
   if (!name || !subject || !date) {
     document.getElementById('modal-error').style.display = 'flex'; return;
@@ -398,7 +441,7 @@ async function saveTask() {
   document.getElementById('modal-error').style.display = 'none';
 
   try {
-    const reminderAt = calculateReminderAt(date, time, reminder);
+    reminderAt = calculateReminderAt(date, time, reminder);
     if (editId) {
       const task = store.getTask(editId);
       if (!task) throw new Error('No se encontró la tarea que intentas editar.');
@@ -422,11 +465,9 @@ async function saveTask() {
   document.getElementById('modal-success').style.display = 'flex';
 
   if (reminder) {
-    const rLabel = {
-      '1h': '1 hora', '3h': '3 horas', '1d': '1 día', '2d': '2 días', '1w': '1 semana'
-    }[reminder] || reminder;
+    const scheduledAt = new Date(reminderAt).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' });
     document.getElementById('remind-text').textContent =
-      `Se enviará un correo a tu cuenta de Google ${rLabel} antes de la fecha de entrega (${date}${time ? ` a las ${time}` : ', tomando las 09:00 como hora de entrega'}).`;
+      `El correo quedó programado para ${scheduledAt}. Se enviará a tu cuenta de Google a esa hora; guardar la tarea no lo envía inmediatamente.`;
     setTimeout(() => {
       closeModal();
       document.getElementById('remind-modal').classList.add('open');
