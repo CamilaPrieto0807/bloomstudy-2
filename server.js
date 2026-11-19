@@ -4,7 +4,6 @@ const express = require('express');
 const Database = require('better-sqlite3');
 const { cert, getApps, initializeApp } = require('firebase-admin/app');
 const { getAuth } = require('firebase-admin/auth');
-const nodemailer = require('nodemailer');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -21,26 +20,25 @@ const allowedRelaxationMethods = new Set([
 ]);
 const allowedReminderOffsets = new Set(['1h', '3h', '1d', '2d', '1w']);
 
-const smtpValues = {
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT || 587),
-  user: process.env.SMTP_USER,
-  pass: process.env.SMTP_PASS,
-  from: process.env.SMTP_FROM || process.env.SMTP_USER
-};
-const smtpConfigured = Boolean(smtpValues.host || smtpValues.user || smtpValues.pass);
-if (smtpConfigured && (!smtpValues.host || !smtpValues.user || !smtpValues.pass ||
-    !Number.isInteger(smtpValues.port) || smtpValues.port < 1 || smtpValues.port > 65535)) {
-  throw new Error('Configura SMTP_HOST, SMTP_PORT, SMTP_USER y SMTP_PASS para habilitar correos.');
+// --- Correo con Resend (HTTPS, no usa SMTP) ---
+const resendApiKey = process.env.RESEND_API_KEY;
+const mailFrom = process.env.MAIL_FROM || 'BloomStudy <onboarding@resend.dev>';
+const mailEnabled = Boolean(resendApiKey);
+
+async function enviarCorreo({ to, subject, text, html }) {
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ from: mailFrom, to: [to], subject, text, html }),
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!res.ok) {
+    throw new Error(`Resend ${res.status}: ${await res.text()}`);
+  }
 }
-const mailTransport = smtpConfigured
-  ? nodemailer.createTransport({
-    host: smtpValues.host,
-    port: smtpValues.port,
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user: smtpValues.user, pass: smtpValues.pass }
-  })
-  : null;
 
 fs.mkdirSync(path.dirname(databasePath), { recursive: true });
 const db = new Database(databasePath);
@@ -149,8 +147,8 @@ function getTaskReminder(task, email, emailVerified) {
   if (!allowedReminderOffsets.has(task.reminder)) {
     return { error: 'El intervalo del recordatorio no es válido.', status: 400 };
   }
-  if (!mailTransport) {
-    return { error: 'El correo no está configurado. Añade las variables SMTP en Render para activar recordatorios.', status: 503 };
+  if (!mailEnabled) {
+    return { error: 'El correo no está configurado. Añade RESEND_API_KEY en Render para activar recordatorios.', status: 503 };
   }
   if (!emailVerified || !email) {
     return { error: 'Firebase no confirmó una dirección de correo para esta cuenta.', status: 400 };
@@ -207,7 +205,7 @@ function escapeHtml(value) {
 
 let processingReminders = false;
 async function sendDueReminders() {
-  if (!mailTransport || processingReminders) return;
+  if (!mailEnabled || processingReminders) return;
   processingReminders = true;
   try {
     const now = Date.now();
@@ -245,13 +243,14 @@ async function sendDueReminders() {
       const html = `<div style="font-family:Arial,sans-serif;color:#252923;line-height:1.6"><h2 style="color:#806a3a">BloomStudy</h2><p>Este es tu recordatorio académico:</p><p><strong>${escapeHtml(task.name)}</strong><br>${escapeHtml(task.subject)}<br>Fecha de entrega: ${escapeHtml(dueText)}</p><p>Ingresa a BloomStudy para revisar tus actividades.</p></div>`;
 
       try {
-        await mailTransport.sendMail({
-          from: smtpValues.from,
+        console.log(`Enviando recordatorio ${reminder.task_id} a ${reminder.recipient_email}...`);
+        await enviarCorreo({
           to: reminder.recipient_email,
           subject,
           text,
           html
         });
+        console.log(`Recordatorio ${reminder.task_id} enviado.`);
         db.prepare(`
           UPDATE task_reminders SET status = 'sent', sent_at = ?, locked_at = NULL, last_error = NULL
           WHERE uid = ? AND task_id = ? AND status = 'sending'
@@ -426,17 +425,13 @@ app.listen(port, () => {
   console.log(`BloomStudy disponible en http://localhost:${port}`);
 });
 
-if (mailTransport) {
-  mailTransport.verify()
-    .then(() => console.log(`SMTP listo en ${smtpValues.host}:${smtpValues.port}.`))
-    .catch(error => console.error(
-      `No se pudo verificar SMTP (${error.code || 'error'}): ${error.message}`
-    ));
+if (mailEnabled) {
+  console.log('Correo listo: usando Resend.');
   sendDueReminders().catch(error => console.error('Falló la revisión inicial de recordatorios:', error));
   const reminderInterval = setInterval(() => {
     sendDueReminders().catch(error => console.error('Falló la revisión de recordatorios:', error));
   }, 30000);
   reminderInterval.unref();
 } else {
-  console.warn('Recordatorios por correo desactivados: configura las variables SMTP.');
+  console.warn('Recordatorios por correo desactivados: configura RESEND_API_KEY.');
 }
