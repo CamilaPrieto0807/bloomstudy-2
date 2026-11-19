@@ -1,6 +1,6 @@
 # Configuración de BloomStudy
 
-BloomStudy usa Firebase Authentication para iniciar sesión, Express para la API y SQLite para persistir datos por cuenta.
+BloomStudy usa Firebase Authentication, Express, SQLite y correos SMTP para enviar recordatorios de tareas.
 
 ## Firebase
 
@@ -20,6 +20,21 @@ npm start
 
 Desde la raíz del proyecto, instala dependencias con `npm install` y ejecuta `npm start`. La aplicación estará en `http://localhost:3000`; `PORT` permite cambiar el puerto y `DB_PATH` la ruta de SQLite (por defecto `./data/bloomstudy.db`).
 
+En Render, el sistema de archivos del servicio puede ser temporal. Para conservar SQLite entre reinicios y despliegues, crea un **Persistent Disk**, móntalo en `/var/data` y configura `DB_PATH=/var/data/bloomstudy.db`. SQLite debe ejecutarse con una sola instancia del servicio. Si ya hay datos en el disco temporal, respáldalos y cópialos al disco persistente antes de cambiar `DB_PATH`; los datos no se trasladan solos.
+
 Abre la aplicación mediante el servidor local, no con `file://`. En producción, sirve este servidor detrás de HTTPS.
 
-La API verifica el ID token de Firebase en cada solicitud y toma el UID del token verificado para aislar los datos. El perfil académico, tareas, historial de uso y método de relajación elegido se guardan en SQLite; pueden usarse desde varios dispositivos siempre que inicien sesión en la misma cuenta.
+## Recordatorios por correo
+
+El servidor envía los recordatorios a la dirección verificada del token de Firebase del usuario. En Render, configura estas variables en **Environment**:
+
+- `SMTP_HOST`: servidor SMTP (por ejemplo, `smtp.gmail.com`).
+- `SMTP_PORT`: puerto SMTP (normalmente `587` para STARTTLS o `465` para TLS).
+- `SMTP_SECURE`: `false` para el puerto 587; `true` para el 465.
+- `SMTP_USER`: cuenta autorizada para enviar.
+- `SMTP_PASS`: contraseña SMTP o contraseña de aplicación; nunca la subas a GitHub.
+- `SMTP_FROM`: remitente permitido por el proveedor (opcional; por defecto `SMTP_USER`).
+
+Con Gmail, usa una **contraseña de aplicación** de Google y mantén la verificación en dos pasos habilitada. Los correos se comprueban cada 30 segundos. Si SMTP no está configurado, la app informa que no se puede guardar una tarea con recordatorio.
+
+La API verifica el ID token de Firebase en cada solicitud y toma el UID del token verificado para aislar los datos. El perfil académico, tareas, historial de uso, preferencias de relajación y cola de recordatorios se guardan en SQLite; pueden usarse desde varios dispositivos si inician sesión en la misma cuenta.

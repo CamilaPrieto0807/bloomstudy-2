@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <meta name="theme-color" content="#fff1f2"/>
+  <meta name="theme-color" content="#f5f4f0"/>
   <meta name="mobile-web-app-capable" content="yes"/>
   <title>BloomStudy ✦ Tu compañera académica</title>
 
   <!-- ── Fuentes ── -->
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500;600&family=Pacifico&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet"/>
 
   <!-- ── Estilos ── -->
   <link rel="stylesheet" href="css/styles.css"/>
@@ -58,9 +58,16 @@
   ================================================================ -->
   <div class="screen active" id="screen-welcome">
     <div class="logo-wrap">
-      <span class="logo-icon">🌸</span>
+      <svg class="lotus-mark" viewBox="0 0 96 76" role="img" aria-label="Flor de loto dorada">
+        <path d="M47 58C31 63 14 56 7 44c17-3 32 3 41 13Z" fill="#d8c28e" stroke="#8b6d2f" stroke-width="1.8"/>
+        <path d="M49 58c16 5 33-2 40-14-17-3-32 3-41 13Z" fill="#d8c28e" stroke="#8b6d2f" stroke-width="1.8"/>
+        <path d="M47 56C34 49 27 36 30 21c13 7 20 20 20 35Z" fill="#eadcb9" stroke="#8b6d2f" stroke-width="1.8"/>
+        <path d="M49 56c13-7 20-20 17-35-13 7-20 20-20 35Z" fill="#eadcb9" stroke="#8b6d2f" stroke-width="1.8"/>
+        <path d="M48 55C38 42 37 25 48 8c11 17 10 34 0 47Z" fill="#c6a85f" stroke="#8b6d2f" stroke-width="1.8"/>
+        <path d="M14 66c21 6 47 6 68 0" fill="none" stroke="#9b7a35" stroke-linecap="round" stroke-width="2"/>
+      </svg>
       <div class="app-name">BloomStudy</div>
-      <div class="app-tagline">Tu compañera académica ✦ Florece con cada tarea</div>
+      <div class="app-tagline">Organiza tu vida académica. Avanza con propósito.</div>
     </div>
     <div class="welcome-features">
       <div class="feat-chip">📚 Tareas y proyectos</div>
@@ -70,7 +77,7 @@
       <div class="feat-chip">📊 Estadísticas</div>
     </div>
     <button class="btn btn-primary" style="max-width:320px;" onclick="startGoogleSignIn()">
-      🌸 Continuar con Google
+      Continuar con Google
     </button>
     <button class="btn btn-secondary" style="max-width:320px;margin-top:.6rem;" onclick="startGoogleSignIn()">
       Ya tengo cuenta — Ingresar con Google
@@ -84,7 +91,14 @@
   <div class="screen" id="screen-register">
     <div class="card">
       <div style="text-align:center;margin-bottom:1.5rem;">
-        <span style="font-size:2.8rem;">🌺</span>
+        <svg class="lotus-mark lotus-mark-small" viewBox="0 0 96 76" role="img" aria-label="Flor de loto dorada">
+          <path d="M47 58C31 63 14 56 7 44c17-3 32 3 41 13Z" fill="#d8c28e" stroke="#8b6d2f" stroke-width="1.8"/>
+          <path d="M49 58c16 5 33-2 40-14-17-3-32 3-41 13Z" fill="#d8c28e" stroke="#8b6d2f" stroke-width="1.8"/>
+          <path d="M47 56C34 49 27 36 30 21c13 7 20 20 20 35Z" fill="#eadcb9" stroke="#8b6d2f" stroke-width="1.8"/>
+          <path d="M49 56c13-7 20-20 17-35-13 7-20 20-20 35Z" fill="#eadcb9" stroke="#8b6d2f" stroke-width="1.8"/>
+          <path d="M48 55C38 42 37 25 48 8c11 17 10 34 0 47Z" fill="#c6a85f" stroke="#8b6d2f" stroke-width="1.8"/>
+          <path d="M14 66c21 6 47 6 68 0" fill="none" stroke="#9b7a35" stroke-linecap="round" stroke-width="2"/>
+        </svg>
         <h2 style="margin:0;">¡Bienvenida!</h2>
         <p style="color:var(--text-light);font-size:.88rem;">Completa tu perfil académico para personalizar tu experiencia</p>
         <p id="reg-google-email" class="auth-email"></p>
@@ -127,7 +141,7 @@
         </select>
       </div>
       <div class="alert-error" id="reg-error">⚠️ Por favor completa todos los campos.</div>
-      <button class="btn btn-primary" onclick="registerUser()">🌸 Crear mi cuenta</button>
+      <button class="btn btn-primary" onclick="registerUser()">Crear mi cuenta</button>
       <button class="btn btn-secondary" style="width:100%;margin-top:.5rem;" onclick="cancelRegistration()">← Volver</button>
     </div>
   </div>
@@ -201,11 +215,11 @@
        PANTALLA 6 — NOTAS ANTI-ESTRÉS
   ================================================================ -->
   <div class="screen has-nav" id="screen-notes">
-    <div class="card card-xl">
-      <div style="text-align:center;margin-bottom:1.5rem;">
+    <div class="card card-xl notes-shell">
+      <div class="notes-heading" style="text-align:center;margin-bottom:1.5rem;">
         <span style="font-size:2.5rem;">🌿</span>
         <h2 style="margin:.3rem 0 .2rem;">Notas Anti-Estrés</h2>
-        <p style="color:var(--text-light);font-size:.88rem;">Pequeños recordatorios para tu bienestar</p>
+        <p style="color:var(--text-light);font-size:.88rem;">Elige una actividad y sigue la guía a tu propio ritmo.</p>
       </div>
       <div class="note-grid" id="notes-grid"></div>
       <div class="divider"></div>
@@ -222,6 +236,52 @@
     </div>
   </div>
 
+  <div class="modal-overlay guide-overlay" id="guide-modal" onclick="closeGuidedActivity()" aria-hidden="true">
+    <section class="guide-dialog" role="dialog" aria-modal="true" aria-labelledby="guide-title"
+      aria-describedby="guide-instruction" onclick="event.stopPropagation()">
+      <button class="guide-close" id="guide-close" type="button" onclick="closeGuidedActivity()" aria-label="Cerrar actividad">×</button>
+      <div class="guide-heading">
+        <span class="guide-kicker">PAUSA GUIADA</span>
+        <h2 id="guide-title"></h2>
+        <p id="guide-intro"></p>
+      </div>
+      <div class="guide-visual" id="guide-visual" aria-hidden="true">
+        <div class="guide-orbit"></div>
+        <div class="guide-glow"></div>
+        <svg class="lung-illustration" id="lung-illustration" viewBox="0 0 220 190" role="presentation">
+          <defs>
+            <linearGradient id="lung-fill" x1="0" x2="1" y1="0" y2="1">
+              <stop offset="0" stop-color="#eadcb9"/>
+              <stop offset="1" stop-color="#c5d0bd"/>
+            </linearGradient>
+          </defs>
+          <path class="lung-trachea" d="M110 32v45m0-14-26 20m26-20 26 20"/>
+          <path class="lung-left" d="M82 78C61 72 43 88 39 113c-5 30 5 54 28 54 18 0 26-18 25-43-1-20-4-38-10-46Z"/>
+          <path class="lung-right" d="M138 78c21-6 39 10 43 35 5 30-5 54-28 54-18 0-26-18-25-43 1-20 4-38 10-46Z"/>
+        </svg>
+        <span class="guide-generic-icon" id="guide-generic-icon"></span>
+      </div>
+      <div class="guide-timer-panel">
+        <time id="guide-timer" class="guide-timer" aria-label="Tiempo restante">00:00</time>
+        <div class="guide-progress-track" role="progressbar" id="guide-progress"
+          aria-label="Progreso de la actividad" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="guide-progress-fill" id="guide-progress-fill"></div>
+        </div>
+        <div class="guide-phase-count" id="guide-phase-count" aria-live="polite"></div>
+      </div>
+      <div class="guide-instructions" aria-live="polite">
+        <h3 id="guide-phase-title"></h3>
+        <p id="guide-instruction"></p>
+      </div>
+      <p class="guide-safety" id="guide-safety" hidden></p>
+      <div class="guide-controls">
+        <button class="btn btn-primary" type="button" id="guide-start" onclick="toggleGuidedActivity()">Comenzar</button>
+        <button class="btn btn-secondary" type="button" onclick="restartGuidedActivity()">Reiniciar</button>
+      </div>
+      <p class="guide-footnote">La guía es flexible: puedes detenerte o cerrar en cualquier momento.</p>
+    </section>
+  </div>
+
   <!-- ================================================================
        PANTALLA 7 — PERFIL
   ================================================================ -->
@@ -234,19 +294,19 @@
       </div>
       <div class="form-group">
         <label>🎓 Código estudiantil</label>
-        <input type="text" id="profile-code" readonly style="background:rgba(244,114,182,.05);"/>
+        <input type="text" id="profile-code" readonly style="background:rgba(154,127,67,.05);"/>
       </div>
       <div class="form-group">
         <label>✉️ Cuenta de Google</label>
-        <input type="email" id="profile-email" readonly style="background:rgba(244,114,182,.05);"/>
+        <input type="email" id="profile-email" readonly style="background:rgba(154,127,67,.05);"/>
       </div>
       <div class="form-group">
         <label>📚 Carrera</label>
-        <input type="text" id="profile-career" readonly style="background:rgba(244,114,182,.05);"/>
+        <input type="text" id="profile-career" readonly style="background:rgba(154,127,67,.05);"/>
       </div>
       <div class="form-group">
         <label>🏫 Universidad</label>
-        <input type="text" id="profile-uni" readonly style="background:rgba(244,114,182,.05);"/>
+        <input type="text" id="profile-uni" readonly style="background:rgba(154,127,67,.05);"/>
       </div>
       <div class="divider"></div>
       <div class="stats-row" id="profile-stats"></div>
@@ -380,7 +440,7 @@
       <h3 class="modal-title">🔔 Recordatorio programado</h3>
       <p id="remind-text" style="color:var(--text-mid);font-size:.93rem;line-height:1.5;"></p>
       <div class="alert-success" style="display:flex;margin-top:1rem;">
-        ✅ Tu recordatorio ha sido guardado. Te avisaremos a tiempo 🌸
+        Recibirás un correo en tu cuenta de Google cuando llegue el momento del recordatorio.
       </div>
       <button class="btn btn-primary" style="margin-top:1rem;"
         onclick="document.getElementById('remind-modal').classList.remove('open')">¡Entendido!</button>

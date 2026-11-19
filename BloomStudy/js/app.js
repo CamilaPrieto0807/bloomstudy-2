@@ -15,6 +15,8 @@ let currentTab      = 'all';
 let calCurrentDate  = new Date();
 let calSelectedDate = null;
 let toastTimer      = null;
+let guidedActivityState = null;
+let guideLastFocus = null;
 
 /* ===================== NAVEGACIÓN DE PANTALLAS ===================== */
 function showScreen(name) {
@@ -44,21 +46,6 @@ function initTicker() {
   const inner = document.getElementById('ticker-inner');
   const msgs  = [...TICKER_MSGS, ...TICKER_MSGS]; // duplicar para loop sin cortes
   inner.innerHTML = msgs.map(m => `<span class="ticker-item">${m}</span>`).join('');
-}
-
-/* ===================== PÉTALOS FLOTANTES ===================== */
-function createPetals() {
-  const emojis = ['🌸', '🌺', '💮', '🌷', '✿', '❀'];
-  for (let i = 0; i < 12; i++) {
-    const p = document.createElement('div');
-    p.className   = 'petal';
-    p.textContent = emojis[Math.floor(Math.random() * emojis.length)];
-    p.style.left             = Math.random() * 100 + 'vw';
-    p.style.animationDuration = (12 + Math.random() * 18) + 's';
-    p.style.animationDelay   = (Math.random() * 20) + 's';
-    p.style.fontSize         = (.8 + Math.random() * .8) + 'rem';
-    document.body.appendChild(p);
-  }
 }
 
 /* ===================== TOAST MOTIVACIONAL ===================== */
@@ -259,7 +246,7 @@ function renderHome() {
   document.getElementById('home-greeting').innerHTML = `
     <div class="user-avatar">${u.initials}</div>
     <div>
-      <div style="font-weight:700;font-size:1rem;">${greeting}, ${u.name.split(' ')[0]}! 🌸</div>
+      <div style="font-weight:700;font-size:1rem;">${greeting}, ${u.name.split(' ')[0]}.</div>
       <div style="font-size:.78rem;color:var(--text-light);">${u.career} · ${u.semester} semestre</div>
     </div>`;
 
@@ -285,7 +272,7 @@ function renderHome() {
 
   const up = document.getElementById('upcoming-tasks');
   if (!upcoming.length) {
-    up.innerHTML = `<div class="empty-state"><span>🎉</span>¡No tienes entregas próximas! Disfruta tu tiempo libre 🌸</div>`;
+    up.innerHTML = `<div class="empty-state"><span>✓</span>No tienes entregas próximas.</div>`;
   } else {
     up.innerHTML = `<div class="task-list">${upcoming.map(taskHTML).join('')}</div>`;
   }
@@ -312,7 +299,7 @@ function renderTasks() {
   if (!list.length) {
     container.innerHTML = `<div class="empty-state">
       <span>${currentTab === 'done' ? '🎉' : '📋'}</span>
-      ${currentTab === 'done' ? 'Aún no has completado tareas. ¡Tú puedes!' : 'Sin tareas aquí. Agrega una nueva 🌸'}
+      ${currentTab === 'done' ? 'Aún no has completado tareas.' : 'No hay tareas en esta lista. Agrega una nueva.'}
     </div>`;
   } else {
     container.innerHTML = `<div class="task-list">${list.map(taskHTML).join('')}</div>`;
@@ -411,15 +398,17 @@ async function saveTask() {
   document.getElementById('modal-error').style.display = 'none';
 
   try {
+    const reminderAt = calculateReminderAt(date, time, reminder);
     if (editId) {
       const task = store.getTask(editId);
       if (!task) throw new Error('No se encontró la tarea que intentas editar.');
       await store.updateTask({
         ...task,
-        name, subject, date, time, priority, desc, reminder
+        name, subject, date, time, priority, desc, reminder, reminderAt
       });
     } else {
       const task = new Task(name, subject, date, time, priority, desc, reminder);
+      task.reminderAt = reminderAt;
       await store.addTask(task);
     }
   } catch (error) {
@@ -437,7 +426,7 @@ async function saveTask() {
       '1h': '1 hora', '3h': '3 horas', '1d': '1 día', '2d': '2 días', '1w': '1 semana'
     }[reminder] || reminder;
     document.getElementById('remind-text').textContent =
-      `Se ha programado un recordatorio para "${name}" (${subject}) — ${rLabel} antes de la fecha de entrega (${date}).`;
+      `Se enviará un correo a tu cuenta de Google ${rLabel} antes de la fecha de entrega (${date}${time ? ` a las ${time}` : ', tomando las 09:00 como hora de entrega'}).`;
     setTimeout(() => {
       closeModal();
       document.getElementById('remind-modal').classList.add('open');
@@ -449,6 +438,20 @@ async function saveTask() {
   renderHome();
   renderTasks();
   renderCalendar();
+}
+
+function calculateReminderAt(date, time, reminder) {
+  if (!reminder) return null;
+  const dueAt = new Date(`${date}T${time || '09:00'}:00`);
+  if (Number.isNaN(dueAt.getTime())) throw new Error('La fecha u hora de entrega no es válida.');
+  const offsets = { '1h': 3600000, '3h': 10800000, '1d': 86400000, '2d': 172800000, '1w': 604800000 };
+  const offset = offsets[reminder];
+  if (!offset) throw new Error('El intervalo del recordatorio no es válido.');
+  const reminderAt = new Date(dueAt.getTime() - offset);
+  if (reminderAt.getTime() <= Date.now()) {
+    throw new Error('La hora de ese recordatorio ya pasó. Elige otra fecha u otro intervalo.');
+  }
+  return reminderAt.toISOString();
 }
 
 /* ===================== TOGGLE / ELIMINAR TAREA ===================== */
@@ -543,7 +546,7 @@ function renderCalDayTasks() {
   document.getElementById('cal-day-title').textContent = `📅 ${calSelectedDate} — ${tasks.length} tarea(s)`;
   if (!tasks.length) {
     document.getElementById('cal-day-tasks').innerHTML =
-      `<div class="empty-state"><span>🌸</span>Nada programado para este día.</div>`;
+      `<div class="empty-state"><span>—</span>Nada programado para este día.</div>`;
   } else {
     document.getElementById('cal-day-tasks').innerHTML =
       `<div class="task-list">${tasks.map(taskHTML).join('')}</div>`;
@@ -554,9 +557,13 @@ function renderCalDayTasks() {
 function renderNotes() {
   const methods = [
     { id: 'breathing', label: 'Respiración consciente (4-7-8)' },
+    { id: 'music', label: 'Música y sonidos tranquilos' },
+    { id: 'hydration', label: 'Hidratación y pausa' },
     { id: 'pomodoro', label: 'Pomodoro: estudio y descanso' },
+    { id: 'sleep', label: 'Pausa para descansar' },
+    { id: 'movement', label: 'Pausa de movimiento' },
+    { id: 'gratitude', label: 'Diario de gratitud' },
     { id: 'mindfulness', label: 'Mindfulness' },
-    { id: 'music', label: 'Música relajante' }
   ];
   const select = document.getElementById('relaxation-method');
   select.innerHTML = `<option value="">Elige una opción</option>${methods.map(method =>
@@ -567,11 +574,190 @@ function renderNotes() {
     ? 'Tu preferencia está guardada en tu cuenta.'
     : 'Aún no has elegido un método.';
   document.getElementById('notes-grid').innerHTML = ANTI_STRESS_NOTES.map(n => `
-    <div class="note-card" style="background:${n.bg};border:1px solid rgba(244,114,182,.18);">
-      <div class="note-icon">${n.icon}</div>
-      <div class="note-title" style="color:var(--text-dark);">${n.title}</div>
-      <div class="note-text" style="color:var(--text-mid);">${n.text}</div>
-    </div>`).join('');
+    <button class="note-card" type="button" style="--note-background:${n.bg};"
+      onclick="openGuidedActivity('${n.id}')" aria-label="Iniciar guía: ${n.title}">
+      <span class="note-card-top">
+        <span class="note-icon" aria-hidden="true">${n.icon}</span>
+        <span class="note-duration">${n.duration}</span>
+      </span>
+      <span class="note-title">${n.title}</span>
+      <span class="note-text">${n.text}</span>
+      <span class="note-start">Iniciar guía <span aria-hidden="true">→</span></span>
+    </button>`).join('');
+}
+
+function openGuidedActivity(activityId) {
+  const activity = ANTI_STRESS_NOTES.find(note => note.id === activityId);
+  if (!activity) {
+    console.error(`No se encontró la actividad guiada: ${activityId}`);
+    return;
+  }
+
+  clearInterval(guidedActivityState && guidedActivityState.interval);
+  const cycles = activity.cycles || 1;
+  const phases = Array.from({ length: cycles }, (_, cycleIndex) =>
+    activity.steps.map((step, stepIndex) => ({ ...step, cycle: cycleIndex + 1, step: stepIndex + 1 }))
+  ).flat();
+  guidedActivityState = {
+    activity,
+    phases,
+    phaseIndex: 0,
+    remainingMs: phases[0].seconds * 1000,
+    phaseEndsAt: null,
+    completed: false,
+    running: false,
+    interval: null
+  };
+  guideLastFocus = document.activeElement;
+
+  const modal = document.getElementById('guide-modal');
+  document.getElementById('guide-title').textContent = activity.title;
+  document.getElementById('guide-intro').textContent = activity.text;
+  document.getElementById('guide-safety').textContent = activity.safety || '';
+  document.getElementById('guide-safety').hidden = !activity.safety;
+  document.getElementById('guide-generic-icon').textContent = activity.icon;
+  document.getElementById('guide-visual').classList.toggle('is-breathing', activity.id === 'breathing');
+  document.getElementById('lung-illustration').hidden = activity.id !== 'breathing';
+  document.getElementById('guide-generic-icon').hidden = activity.id === 'breathing';
+  document.body.classList.add('guide-open');
+  modal.classList.add('open');
+  modal.setAttribute('aria-hidden', 'false');
+  renderGuidedPhase(true);
+  document.getElementById('guide-close').focus();
+}
+
+function renderGuidedPhase(resetVisual = false) {
+  if (!guidedActivityState) return;
+  const state = guidedActivityState;
+  const activity = state.activity;
+  const phase = state.phases[state.phaseIndex];
+  const visual = document.getElementById('guide-visual');
+  const startButton = document.getElementById('guide-start');
+  const breathState = state.running ? phase.breath || 'rest' : 'rest';
+
+  if (state.completed) {
+    document.getElementById('guide-phase-title').textContent = 'Actividad completada';
+    document.getElementById('guide-instruction').textContent = 'Tómate un momento para notar cómo te sientes. Puedes cerrar la guía cuando quieras.';
+    document.getElementById('guide-phase-count').textContent = 'Buen trabajo, hiciste una pausa para ti.';
+    document.getElementById('guide-timer').textContent = '00:00';
+    document.getElementById('guide-progress-fill').style.width = '100%';
+    document.getElementById('guide-progress').setAttribute('aria-valuenow', '100');
+    startButton.textContent = 'Completado';
+    startButton.disabled = true;
+    visual.dataset.breath = 'rest';
+    return;
+  }
+
+  document.getElementById('guide-phase-title').textContent = phase.title;
+  document.getElementById('guide-instruction').textContent = phase.instruction;
+  document.getElementById('guide-phase-count').textContent =
+    `Paso ${phase.step} de ${activity.steps.length}` +
+    (activity.cycles > 1 ? ` · Ciclo ${phase.cycle} de ${activity.cycles}` : '');
+  startButton.textContent = state.running
+    ? 'Pausar'
+    : state.remainingMs === phase.seconds * 1000 ? 'Comenzar' : 'Continuar';
+  startButton.disabled = false;
+  visual.dataset.breath = breathState;
+  visual.style.setProperty('--breath-duration', `${phase.seconds}s`);
+
+  if (resetVisual && state.running && phase.breath === 'inhale') {
+    visual.dataset.breath = 'rest';
+    requestAnimationFrame(() => {
+      if (guidedActivityState === state && !state.completed) visual.dataset.breath = 'inhale';
+    });
+  }
+  updateGuidedTimer();
+}
+
+function updateGuidedTimer() {
+  if (!guidedActivityState || guidedActivityState.completed) return;
+  const state = guidedActivityState;
+  const phase = state.phases[state.phaseIndex];
+  const remainingMs = state.running
+    ? Math.max(0, state.phaseEndsAt - Date.now())
+    : state.remainingMs;
+  const remainingSeconds = Math.ceil(remainingMs / 1000);
+  const totalSeconds = state.phases.reduce((total, item) => total + item.seconds, 0);
+  const elapsedSeconds = totalSeconds - (
+    state.phases.slice(state.phaseIndex + 1).reduce((total, item) => total + item.seconds, 0) +
+    remainingSeconds
+  );
+  const progress = Math.max(0, Math.min(100, Math.floor((elapsedSeconds / totalSeconds) * 100)));
+
+  document.getElementById('guide-timer').textContent = formatGuideTime(remainingSeconds);
+  document.getElementById('guide-progress-fill').style.width = `${progress}%`;
+  document.getElementById('guide-progress').setAttribute('aria-valuenow', String(progress));
+  document.getElementById('guide-progress').setAttribute('aria-valuetext', `${progress}% completado`);
+}
+
+function formatGuideTime(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const rest = seconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`;
+}
+
+function tickGuidedActivity() {
+  const state = guidedActivityState;
+  if (!state || !state.running) return;
+
+  const now = Date.now();
+  while (state.running && now >= state.phaseEndsAt) {
+    state.phaseIndex++;
+    if (state.phaseIndex >= state.phases.length) {
+      state.completed = true;
+      state.running = false;
+      clearInterval(state.interval);
+      state.interval = null;
+      renderGuidedPhase();
+      return;
+    }
+    state.remainingMs = state.phases[state.phaseIndex].seconds * 1000;
+    state.phaseEndsAt += state.remainingMs;
+    renderGuidedPhase(true);
+  }
+
+  if (state.running) updateGuidedTimer();
+}
+
+function toggleGuidedActivity() {
+  const state = guidedActivityState;
+  if (!state || state.completed) return;
+
+  if (state.running) {
+    state.remainingMs = Math.max(0, state.phaseEndsAt - Date.now());
+    state.running = false;
+    clearInterval(state.interval);
+    state.interval = null;
+  } else {
+    state.running = true;
+    state.phaseEndsAt = Date.now() + state.remainingMs;
+    state.interval = setInterval(tickGuidedActivity, 200);
+  }
+  renderGuidedPhase();
+}
+
+function restartGuidedActivity() {
+  if (!guidedActivityState) return;
+  const state = guidedActivityState;
+  clearInterval(state.interval);
+  state.phaseIndex = 0;
+  state.remainingMs = state.phases[0].seconds * 1000;
+  state.phaseEndsAt = null;
+  state.completed = false;
+  state.running = false;
+  state.interval = null;
+  renderGuidedPhase(true);
+}
+
+function closeGuidedActivity() {
+  const modal = document.getElementById('guide-modal');
+  if (!modal.classList.contains('open')) return;
+  if (guidedActivityState) clearInterval(guidedActivityState.interval);
+  guidedActivityState = null;
+  modal.classList.remove('open');
+  modal.setAttribute('aria-hidden', 'true');
+  document.body.classList.remove('guide-open');
+  if (guideLastFocus && guideLastFocus.isConnected) guideLastFocus.focus();
 }
 
 async function saveRelaxationMethod() {
@@ -601,7 +787,7 @@ function renderProfile() {
   document.getElementById('profile-stats').innerHTML = `
     <div class="stat-chip"><div class="stat-num">${store.tasks.length}</div><div class="stat-lbl">Tareas totales</div></div>
     <div class="stat-chip"><div class="stat-num" style="color:#10b981;">${store.completed.length}</div><div class="stat-lbl">Completadas</div></div>
-    <div class="stat-chip"><div class="stat-num" style="color:#e11d48;">${store.pct}%</div><div class="stat-lbl">Progreso</div></div>`;
+    <div class="stat-chip"><div class="stat-num" style="color:var(--rose-600);">${store.pct}%</div><div class="stat-lbl">Progreso</div></div>`;
 }
 
 /* ===================== REGISTRO DE USO ===================== */
@@ -678,10 +864,31 @@ async function clearUsageData() {
 
 /* ===================== ARRANQUE ===================== */
 window.addEventListener('DOMContentLoaded', () => {
-  createPetals();
   initTicker();
   showScreen('welcome');
   setupFirebaseAuth();
+});
+
+document.addEventListener('keydown', event => {
+  const modal = document.getElementById('guide-modal');
+  if (!modal || !modal.classList.contains('open')) return;
+  if (event.key === 'Escape') {
+    closeGuidedActivity();
+    return;
+  }
+  if (event.key !== 'Tab') return;
+
+  const focusable = [...modal.querySelectorAll('button:not([disabled])')];
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
 });
 
 // Guardar duración al cerrar/recargar la página

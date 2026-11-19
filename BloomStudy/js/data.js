@@ -244,7 +244,7 @@ class UsageTracker {
 
 /* ===================== CONSTANTES ===================== */
 const MOTIVATIONAL = [
-  { icon: '🌸', text: '¡Cada tarea completada es un pétalo más en tu jardín del éxito! Sigue adelante.' },
+  { icon: '✦', text: 'Cada tarea completada es un paso hacia tus metas. Sigue adelante.' },
   { icon: '⭐', text: 'Respira profundo. Tú puedes con todo esto y más. ¡Eres increíble!' },
   { icon: '💪', text: 'No estás sola en esto. Cada estudiante tiene sus luchas — y tú estás ganando.' },
   { icon: '🌈', text: 'Pequeños pasos llevan a grandes resultados. ¡Una tarea a la vez, siempre!' },
@@ -257,19 +257,50 @@ const MOTIVATIONAL = [
 ];
 
 const TICKER_MSGS = [
-  '🌸 ¡Tú puedes con todo!', '📚 El conocimiento es tu superpoder', '⭐ Un día a la vez',
+  '✦ Avanza a tu propio ritmo', '📚 El conocimiento es tu superpoder', '⭐ Un día a la vez',
   '💪 El esfuerzo siempre vale la pena', '🌈 Cada error es aprendizaje',
   '🎯 Enfócate en el proceso', '🦋 Confía en ti misma', '☕ Un descanso también es productivo',
   '🚀 Tu futuro te agradecerá hoy', '💖 El éxito es tuyo', '🌟 Brilla con tu propio ritmo',
 ];
 
 const ANTI_STRESS_NOTES = [
-  { icon: '🫁', title: 'Técnica 4-7-8', text: 'Inhala 4 seg → retén 7 seg → exhala 8 seg. Repite 3 veces para calmar tu sistema nervioso al instante.', bg: 'linear-gradient(135deg,#fff0f5,#fce7f3)' },
-  { icon: '🎵', title: 'Música que ayuda', text: 'Escucha música a 432 Hz o sonidos de la naturaleza mientras estudias. Reducen el cortisol y mejoran la concentración.', bg: 'linear-gradient(135deg,#f0f9ff,#e0f2fe)' },
-  { icon: '🍓', title: 'Hidratación y snacks', text: 'Un cerebro hidratado rinde 20% más. Toma agua cada 30 min y come frutos secos o frutas para mantener la energía.', bg: 'linear-gradient(135deg,#fef9f0,#fef3c7)' },
-  { icon: '⏱️', title: 'Pomodoro Study', text: '25 min de estudio enfocado + 5 min de descanso = máxima productividad. Después de 4 rondas, descansa 15-30 min.', bg: 'linear-gradient(135deg,#f0fdf4,#dcfce7)' },
-  { icon: '🌙', title: 'Sueño es sagrado', text: 'Dormir 7-8 horas consolida lo aprendido en tu memoria. Trasnochar antes de un examen perjudica más de lo que ayuda.', bg: 'linear-gradient(135deg,#f5f3ff,#ede9fe)' },
-  { icon: '🚶', title: 'Mueve el cuerpo', text: '10 minutos de caminar aumentan endorfinas y claridad mental. Es más efectivo que otra hora de estudio sin moverse.', bg: 'linear-gradient(135deg,#fff9f0,#ffedd5)' },
-  { icon: '📓', title: 'Diario de gratitud', text: 'Escribe 3 cosas por las que estás agradecida hoy. La gratitud redirige tu mente del estrés hacia lo positivo.', bg: 'linear-gradient(135deg,#fff1f2,#ffe4e6)' },
-  { icon: '🧘', title: 'Mindfulness express', text: 'Cierra los ojos 2 minutos. Observa tus pensamientos sin juzgarlos. Esto reinicia tu corteza prefrontal.', bg: 'linear-gradient(135deg,#f0fdfa,#ccfbf1)' },
+  { id: 'breathing', icon: '◉', title: 'Técnica 4-7-8', text: 'Sigue una respiración guiada: inhala, haz una pausa cómoda y exhala lentamente.', duration: '1 minuto', bg: 'linear-gradient(135deg,#f7f2e7,#ebe2cd)', steps: [
+    { title: 'Inhala', seconds: 4, instruction: 'Toma aire suavemente por la nariz. Observa cómo el pecho y el abdomen se expanden.', breath: 'inhale' },
+    { title: 'Pausa', seconds: 7, instruction: 'Mantén el aire solo si te resulta cómodo. Si no, continúa respirando con normalidad.', breath: 'hold' },
+    { title: 'Exhala', seconds: 8, instruction: 'Suelta el aire lentamente, sin vaciar los pulmones a la fuerza.', breath: 'exhale' }
+  ], cycles: 3, safety: 'Hazlo sin forzar. Si te mareas o sientes incomodidad, detente y respira normalmente.' },
+  { id: 'music', icon: '♫', title: 'Música que ayuda', text: 'Prepara un momento tranquilo con música instrumental o sonidos de la naturaleza.', duration: '3 minutos', bg: 'linear-gradient(135deg,#eff3ed,#e1e9df)', steps: [
+    { title: 'Elige un sonido', seconds: 30, instruction: 'Busca música instrumental o sonidos de la naturaleza y pon el volumen a un nivel cómodo.' },
+    { title: 'Escucha con atención', seconds: 120, instruction: 'Acomódate y escucha. Si te distraes, nota el sonido y vuelve a él sin juzgarte.' },
+    { title: 'Regresa poco a poco', seconds: 30, instruction: 'Baja el volumen, mueve suavemente las manos y vuelve a tu actividad cuando estés lista.' }
+  ] },
+  { id: 'hydration', icon: '○', title: 'Hidratación y snacks', text: 'Tómate una pausa para beber agua y revisar si necesitas una merienda.', duration: '1 min 30 s', bg: 'linear-gradient(135deg,#f5f2e7,#eee8d6)', steps: [
+    { title: 'Prepara tu pausa', seconds: 20, instruction: 'Busca agua y, si tienes hambre, algo sencillo para comer. No necesitas apresurarte.' },
+    { title: 'Toma un descanso', seconds: 40, instruction: 'Bebe a tu ritmo y nota cómo te sientes. No hace falta terminar el vaso.' },
+    { title: 'Vuelve con calma', seconds: 30, instruction: 'Deja el espacio ordenado y elige qué tarea retomarás después.' }
+  ] },
+  { id: 'pomodoro', icon: '◷', title: 'Pomodoro Study', text: 'Un bloque de concentración de 25 minutos seguido por un descanso de 5 minutos.', duration: '30 minutos', bg: 'linear-gradient(135deg,#edf2eb,#dfe8dc)', steps: [
+    { title: 'Enfoque', seconds: 1500, instruction: 'Elige una sola tarea. Silencia las distracciones y trabaja a tu ritmo durante este bloque.' },
+    { title: 'Descanso', seconds: 300, instruction: 'Al terminar, levántate, estira el cuerpo o descansa la vista. Puedes volver a iniciar otro bloque cuando quieras.' }
+  ] },
+  { id: 'sleep', icon: '☾', title: 'Pausa para descansar', text: 'Crea una transición tranquila para cerrar el estudio o prepararte para dormir.', duration: '2 min 30 s', bg: 'linear-gradient(135deg,#efedf3,#e5e1ec)', steps: [
+    { title: 'Baja el ritmo', seconds: 30, instruction: 'Reduce la luz y aparta por un momento las pantallas y los materiales de estudio.' },
+    { title: 'Afloja los hombros', seconds: 60, instruction: 'Busca una postura cómoda. Suelta los hombros y la mandíbula; respira con naturalidad.' },
+    { title: 'Cierra la pausa', seconds: 60, instruction: 'Quédate en quietud y nota cómo se siente tu cuerpo. No tienes que quedarte dormida.' }
+  ] },
+  { id: 'movement', icon: '↗', title: 'Pausa de movimiento', text: 'Haz movimientos suaves y una caminata corta para cambiar de postura.', duration: '2 minutos', bg: 'linear-gradient(135deg,#edf2ef,#dfe9e4)', steps: [
+    { title: 'Estira suavemente', seconds: 30, instruction: 'Rueda los hombros despacio y estira los brazos solo hasta donde te resulte cómodo.' },
+    { title: 'Da unos pasos', seconds: 60, instruction: 'Camina por un lugar seguro a un ritmo cómodo. También puedes marchar suavemente en el sitio.' },
+    { title: 'Haz una pausa', seconds: 30, instruction: 'Detente, nota tu respiración y vuelve a sentarte cuando estés lista. Para si algo duele.' }
+  ] },
+  { id: 'gratitude', icon: '✎', title: 'Diario de gratitud', text: 'Escribe tres cosas que agradeces o que salieron bien hoy, aunque sean pequeñas.', duration: '3 minutos', bg: 'linear-gradient(135deg,#f7f1e7,#eee5d7)', steps: [
+    { title: 'Primera cosa', seconds: 60, instruction: 'Escribe una cosa pequeña que agradezcas o que haya salido bien hoy.' },
+    { title: 'Segunda cosa', seconds: 60, instruction: 'Anota otra experiencia, persona o momento que valores.' },
+    { title: 'Tercera cosa', seconds: 60, instruction: 'Escribe una última cosa. Puedes volver a leer tus notas cuando termines.' }
+  ] },
+  { id: 'mindfulness', icon: '◎', title: 'Mindfulness express', text: 'Dedica dos minutos a notar tu respiración, tus sensaciones y los sonidos a tu alrededor.', duration: '2 minutos', bg: 'linear-gradient(135deg,#edf2ee,#dfe8e1)', steps: [
+    { title: 'Nota tu respiración', seconds: 40, instruction: 'Siéntate con comodidad y siente el aire entrar y salir. No necesitas cambiar el ritmo.' },
+    { title: 'Observa tus sentidos', seconds: 40, instruction: 'Nota un sonido, una sensación del cuerpo y algo que percibas a tu alrededor.' },
+    { title: 'Vuelve al presente', seconds: 40, instruction: 'Si aparece un pensamiento, reconócelo y vuelve con amabilidad a tu respiración.' }
+  ] }
 ];
